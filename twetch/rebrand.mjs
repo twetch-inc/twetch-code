@@ -92,12 +92,12 @@ const ANCHORED = {
     ],
   ],
   "apps/server/src/environment/ServerEnvironment.ts": [["triage: true", "triage: false"]],
-  "apps/desktop/src/app/DesktopStartupRecovery.ts": [["https://github.com/pingdotgg/t3code/releases", "https://twetch.com"]],
-  "apps/web/src/lib/bootError.ts": [["https://github.com/pingdotgg/t3code/issues/new", "https://twetch.com"]],
+  "apps/desktop/src/app/DesktopStartupRecovery.ts": [["https://github.com/pingdotgg/t3code/releases", "https://github.com/twetch-inc/twetch-code/releases"]],
+  "apps/web/src/lib/bootError.ts": [["https://github.com/pingdotgg/t3code/issues/new", "https://github.com/twetch-inc/twetch-code/issues/new"]],
   "apps/desktop/src/updates/DesktopUpdatePolicy.ts": [
     [
       'mode: "auto",\n  feedUrl: undefined,\n  allowNightly: true,\n  message: null,',
-      'mode: "off",\n  feedUrl: undefined,\n  allowNightly: false,\n  message: "TwetchCode does not update itself. Build a newer version with twetch/update.sh.",',
+      'mode: "auto",\n  feedUrl: undefined,\n  allowNightly: false,\n  message: null,',
     ],
   ],
   "scripts/build-desktop-artifact.ts": [

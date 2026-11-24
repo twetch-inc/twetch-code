@@ -8,8 +8,8 @@ cd "$(dirname "$0")/.."
 ROOT=$PWD
 . twetch/tools.sh
 
-VERSION=$(git describe --tags --abbrev=0 --match 'v[0-9]*' --exclude '*-*')
-VERSION=${VERSION#v}
+VERSION=${TWETCH_VERSION:-$(tr -d '[:space:]' < twetch/VERSION)}
+RELEASE_REPO=${TWETCH_RELEASE_REPO:-twetch-inc/twetch-code}
 [ $# -gt 0 ] || set -- --platform mac --target dmg --arch arm64
 
 (cd twetch/wallet && cargo build --release --locked)
@@ -19,6 +19,7 @@ cd twetch/.stage
 # A T3 Code session exports its own settings; none belong in this build. Neither
 # does anyone's update feed, telemetry key or cloud account.
 for name in $(env | sed -n 's/^\(T3CODE_[A-Z0-9_]*\|TWETCHCODE_[A-Z0-9_]*\|VITE_[A-Z0-9_]*\|GITHUB_REPOSITORY\|GH_TOKEN\|GITHUB_TOKEN\)=.*/\1/p'); do unset "$name"; done
+export GITHUB_REPOSITORY="$RELEASE_REPO"
 export CSC_IDENTITY_AUTO_DISCOVERY=false
 # Never let the copy's install script touch the real repo's git hooks.
 export VITE_GIT_HOOKS=0

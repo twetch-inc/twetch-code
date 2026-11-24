@@ -25,7 +25,7 @@ check() {
   (cd apps/web && ../../node_modules/.bin/effect-tsgo tsrs --noEmit)
   PATH=$PWD/node_modules/.bin:$PATH vp test run scripts/build-desktop-artifact.test.ts apps/desktop/src/backend/DesktopBackendConfiguration.test.ts apps/desktop/src/window/DesktopApplicationMenu.test.ts
   say "our edits to upstream files"
-  git diff --stat "$(cat twetch/UPSTREAM)" -- . ':!twetch' ':!apps/*/src/twetch'
+  git diff --stat "$(cat twetch/UPSTREAM)" -- . ':!twetch' ':!apps/desktop/src/twetch' ':!apps/web/src/twetch'
   say "done. Build the app with twetch/build.sh"
 }
 

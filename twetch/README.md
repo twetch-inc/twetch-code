@@ -14,6 +14,10 @@ Output (macOS arm64, ad-hoc signed): `twetch/dist/TwetchCode.app` and `twetch/di
 Needs Rust, Xcode command line tools, and ssh access to `twetch-inc/twetch-rs` (the pinned `twetch-crypto`).
 Node and pnpm are fetched into `twetch/.tools`. The app is not notarized: on another Mac, open it from the right-click menu the first time.
 
+An ad-hoc build is a new app to macOS every time, so after an update it asks once to let TwetchCode and `twetch-wallet` read
+their keychain entries: choose Always Allow. The app waits until that prompt is answered. A stable certificate avoids it:
+`TWETCH_SIGN_IDENTITY="<a name from security find-identity -v -p codesigning>" twetch/build.sh`.
+
 ## Update from upstream
 
     twetch/update.sh            # newest release

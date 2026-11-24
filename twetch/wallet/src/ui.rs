@@ -231,7 +231,7 @@ async fn qr(State(app): State<Shared>, h: HeaderMap) -> Response {
 
 async fn refresh(State(app): State<Shared>, h: HeaderMap) -> Response {
     guard!(app, h, true);
-    let done = app.engine.refresh_coins(false).await;
+    let done = app.engine.refresh_coins(true).await;
     if done.is_ok() {
         app.engine.retry_now();
     }

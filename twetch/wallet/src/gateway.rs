@@ -1,5 +1,6 @@
 //! The inference gateway's API (its contract is `inference/API.md`).
 
+use crate::chain::Sent;
 use crate::model::Outpoint;
 use crate::secrets::{SecretStore, GATEWAY_KEY};
 use crate::signer::Signer;
@@ -7,6 +8,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use bytes::Bytes;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -255,6 +257,94 @@ impl Gateway {
             return Ok(None);
         }
         Ok(Some(res.error_for_status()?.json::<UsageRow>().await?.cost_sats))
+    }
+
+    /// Spendable coins for this wallet from Twetch's P2P ledger (1-sat outputs excluded).
+    ///
+    /// # Errors
+    /// When the gateway cannot be reached or refuses the request.
+    pub async fn unspent(&self, sync: bool) -> Result<HashMap<Outpoint, u64>> {
+        #[derive(Deserialize)]
+        struct CoinRow {
+            txid: String,
+            vout: u32,
+            satoshis: u64,
+        }
+        #[derive(Deserialize)]
+        struct Body {
+            #[serde(default)]
+            coins: Vec<CoinRow>,
+        }
+        let url = if sync { format!("{}/v1/wallet/unspent?sync=1", self.base) } else { format!("{}/v1/wallet/unspent", self.base) };
+        let res = self.authed(&self.http, |c| c.get(&url)).await?;
+        let body: Body = res.error_for_status()?.json().await?;
+        let mut out = HashMap::with_capacity(body.coins.len());
+        for c in body.coins {
+            if c.satoshis > 1 {
+                out.insert((c.txid, c.vout), c.satoshis);
+            }
+        }
+        Ok(out)
+    }
+
+    /// The transaction recorded by Twetch's ledger as spending `op`, if any.
+    ///
+    /// # Errors
+    /// When the gateway cannot be reached.
+    pub async fn spender(&self, op: &Outpoint) -> Result<Option<String>> {
+        #[derive(Deserialize)]
+        struct Body {
+            txid: String,
+        }
+        let url = format!("{}/v1/wallet/spender/{}/{}", self.base, op.0, op.1);
+        let res = self.authed(&self.http, |c| c.get(&url)).await?;
+        if res.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        let body: Body = res.error_for_status()?.json().await?;
+        Ok((body.txid.len() == 64).then_some(body.txid))
+    }
+
+    /// Broadcast a withdrawal transaction through Twetch's P2P relay.
+    ///
+    /// # Errors
+    /// When no definitive answer came back from the relay.
+    pub async fn broadcast(&self, tx_hex: &str) -> Result<Sent> {
+        let url = format!("{}/v1/wallet/broadcast", self.base);
+        let body = serde_json::json!({ "tx_hex": tx_hex });
+        let res = self.authed(&self.http, |c| c.post(&url).json(&body)).await?;
+        let status = res.status();
+        let text = res.text().await?;
+        if status.is_success() || status == StatusCode::ACCEPTED {
+            return Ok(Sent::Accepted);
+        }
+        anyhow::ensure!(!status.is_server_error() && status != StatusCode::TOO_MANY_REQUESTS, "the relay answered {status}");
+        let low = text.to_lowercase();
+        if status == StatusCode::CONFLICT
+            || low.contains("conflict")
+            || low.contains("missing inputs")
+            || low.contains("missingorspent")
+            || low.contains("double spend")
+            || low.contains("spent")
+        {
+            Ok(Sent::Conflict(text))
+        } else if low.contains("already-known") || low.contains("already in the mempool") || low.contains("already-in-mempool") {
+            Ok(Sent::Accepted)
+        } else {
+            Ok(Sent::Refused(text))
+        }
+    }
+
+    /// BSV/USD rate from `/v1/models`.
+    ///
+    /// # Errors
+    /// When the gateway cannot be reached or has no price.
+    pub async fn bsv_usd(&self) -> Result<f64> {
+        let raw = self.models_raw().await?;
+        let m: Models = serde_json::from_slice(&raw)?;
+        let usd = m.bsv_usd.ok_or_else(|| anyhow!("no BSV price in /v1/models"))?;
+        anyhow::ensure!(usd.is_finite() && usd > 0.0, "bad price");
+        Ok(usd)
     }
 
     /// Hand in a signed payment. Safe to repeat with the same bytes.

@@ -47,7 +47,7 @@ struct Rate {
 pub struct Engine {
     pub db: Arc<Db>,
     pub gateway: Gateway,
-    pub chain: Chain,
+    pub chain: Option<Chain>,
     pub signer: Signer,
     rate: tokio::sync::Mutex<Option<Rate>>,
     gateway_rate: Mutex<Option<f64>>,
@@ -65,7 +65,7 @@ pub struct Engine {
 
 impl Engine {
     #[must_use]
-    pub fn new(db: Db, gateway: Gateway, chain: Chain, signer: Signer) -> Self {
+    pub fn new(db: Db, gateway: Gateway, chain: Option<Chain>, signer: Signer) -> Self {
         Self {
             db: Arc::new(db),
             gateway,
@@ -187,7 +187,11 @@ impl Engine {
     pub async fn bsv_usd(&self) -> Result<f64> {
         let mut held = self.rate.lock().await;
         if held.as_ref().is_none_or(|r| r.at.elapsed() > RATE_TTL) {
-            if let Ok(usd) = self.chain.bsv_usd().await {
+            let fetched = match &self.chain {
+                Some(chain) => chain.bsv_usd().await,
+                None => self.gateway.bsv_usd().await,
+            };
+            if let Ok(usd) = fetched {
                 *held = Some(Rate { usd, at: Instant::now() });
             }
         }
@@ -358,7 +362,12 @@ impl Engine {
             *last = Some(Instant::now());
         }
         let address = self.signer.account().address;
-        let listed = self.chain.unspent(&address).await?;
+        let mut listed = match &self.chain {
+            Some(chain) => chain.unspent(&address).await?,
+            None => self.gateway.unspent(force).await?,
+        };
+        // Never treat 1-sat outputs (ordinals/tokens) as spendable BSV.
+        listed.retain(|_, sats| *sats > 1);
         self.db.write(|t| {
             for (op, sats) in &listed {
                 match t.coin(op)? {
@@ -636,7 +645,11 @@ impl Engine {
                 dead.push(op.clone());
                 continue;
             }
-            match self.chain.spender(op).await {
+            let spender = match &self.chain {
+                Some(chain) => chain.spender(op).await,
+                None => self.gateway.spender(op).await,
+            };
+            match spender {
                 Ok(Some(by)) if by == item.txid => already = true,
                 Ok(Some(_)) => dead.push(op.clone()),
                 Ok(None) | Err(_) => {}
@@ -818,7 +831,11 @@ impl Engine {
     }
 
     async fn broadcast(&self, item: Item) -> Result<()> {
-        match self.chain.send(&item.tx_hex).await {
+        let sent = match &self.chain {
+            Some(chain) => chain.send(&item.tx_hex).await,
+            None => self.gateway.broadcast(&item.tx_hex).await,
+        };
+        match sent {
             Ok(Sent::Accepted) => self.accepted(item, State::Paid),
             Ok(Sent::Conflict(why)) => {
                 let inputs = item.inputs.clone();

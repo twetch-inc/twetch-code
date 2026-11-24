@@ -24,7 +24,8 @@ pub const ACTION: &str = "twetch/inference@0.0.1";
 pub const FEE_PER_KB: u64 = 105;
 pub const DEFAULT_PORT: u16 = 48213;
 pub const DEFAULT_GATEWAY: &str = "https://ai.twetch.com";
-pub const DEFAULT_WOC: &str = "https://api.whatsonchain.com/v1/bsv/main";
+/// Empty by default: uses Twetch's P2P wallet endpoints on the gateway instead of WhatsOnChain.
+pub const DEFAULT_WOC: &str = "";
 
 #[derive(Clone)]
 pub struct Config {
@@ -63,7 +64,7 @@ pub async fn start(cfg: Config, secrets: std::sync::Arc<dyn secrets::SecretStore
     let db = db::Db::open(&dir.join("wallet.redb"))?;
     let signer = signer::Signer::open(secrets.clone(), &db)?;
     let gateway = gateway::Gateway::new(&cfg.gateway, secrets, signer.clone())?;
-    let chain = chain::Chain::new(&cfg.woc)?;
+    let chain = (!cfg.woc.trim().is_empty()).then(|| chain::Chain::new(&cfg.woc)).transpose()?;
     let engine = std::sync::Arc::new(engine::Engine::new(db, gateway, chain, signer));
     let proxy_token = auth::load_or_create_token(&dir.join("proxy-token"))?;
     let admin_token = auth::random_token()?;

@@ -23,7 +23,7 @@ check() {
   pnpm install --frozen-lockfile --prefer-offline
   (cd apps/desktop && ../../node_modules/.bin/effect-tsgo tsrs --noEmit)
   (cd apps/web && ../../node_modules/.bin/effect-tsgo tsrs --noEmit)
-  node_modules/.bin/vp test run scripts/build-desktop-artifact.test.ts
+  PATH=$PWD/node_modules/.bin:$PATH vp test run scripts/build-desktop-artifact.test.ts apps/desktop/src/backend/DesktopBackendConfiguration.test.ts apps/desktop/src/window/DesktopApplicationMenu.test.ts
   say "our edits to upstream files"
   git diff --stat "$(cat twetch/UPSTREAM)" -- . ':!twetch' ':!apps/*/src/twetch'
   say "done. Build the app with twetch/build.sh"

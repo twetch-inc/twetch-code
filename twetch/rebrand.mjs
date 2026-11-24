@@ -21,9 +21,8 @@ const VERBATIM = [
   /(^|\/)third-party-licenses/,
   /^pnpm-lock\.yaml$/,
   /\.(png|ico|icns|jpg|jpeg|gif|webp|woff2?|ttf|otf|wasm|mp3|mp4|wav|ndjson|patch)$/,
-  /\.test\.[cm]?[jt]sx?$/,
 ];
-const SKIP = [/^\.repos\//, /^twetch\//, /^docs\//, /^evals\/(?!package\.json)/];
+const SKIP = [/\.test\.[cm]?[jt]sx?$/, /^\.repos\//, /^twetch\//, /^docs\//, /^evals\/(?!package\.json)/];
 const CODE = /^(apps\/(desktop|server|web)|packages|scripts|native)\//;
 
 /** Applied to every file of the code, in order. */

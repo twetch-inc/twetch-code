@@ -1100,6 +1100,7 @@ export const DESKTOP_EXTRA_RESOURCES = [
     from: "apps/desktop/prod-resources/resource-monitor",
     to: "resource-monitor",
   },
+  { from: "apps/desktop/prod-resources/twetch-wallet", to: "twetch-wallet" }, // TwetchCode
 ] as const;
 export const LINUX_CAPTURE_EXTRA_RESOURCES = [
   {

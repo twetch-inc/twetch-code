@@ -1,3 +1,4 @@
+import "./twetch/wallet.ts"; // TwetchCode
 import * as MacPermissions from "./permissions/MacPermissions.ts";
 import { handleStdioError } from "./app/stdioErrors.ts";
 

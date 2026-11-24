@@ -1,0 +1,3 @@
+# twetch-crypto is a private git dependency: let cargo use the system git (ssh keys).
+[net]
+git-fetch-with-cli = true

@@ -1,0 +1,54 @@
+[workspace]
+members = [".", "stub"]
+resolver = "2"
+
+[package]
+name = "twetch-wallet"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "TwetchCode's local wallet: an OpenAI-compatible proxy that pays per request in BSV"
+
+[workspace.dependencies]
+# The pinned signing code: the same commit as TWETCH_RS_REV in the gateway repo.
+twetch-crypto = { git = "ssh://git@github.com/twetch-inc/twetch-rs.git", rev = "1a9195b08215be80e22774cf782e9d660bf13155" }
+bitcoin = "0.32"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "time", "sync", "signal", "io-std", "io-util"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "query", "tokio"] }
+futures-util = "0.3"
+bytes = "1"
+
+[dependencies]
+twetch-crypto.workspace = true
+bitcoin.workspace = true
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+axum.workspace = true
+futures-util.workspace = true
+bytes.workspace = true
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+redb = "2"
+bip39 = "2.1"
+getrandom = "0.2"
+zeroize = "1"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+anyhow = "1"
+sha2 = "0.10"
+memchr = "2"
+
+[dev-dependencies]
+twetch-stub = { path = "stub" }
+tempfile = "3"
+futures-util.workspace = true
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

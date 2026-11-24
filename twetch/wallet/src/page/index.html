@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>TwetchCode Wallet</title>
+<link rel="stylesheet" href="/wallet/app.css">
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">TwetchCode Wallet</p>
+    <p class="balance"><span id="usd">&nbsp;</span></p>
+    <p class="sub"><span id="bsv">Loading…</span><span id="coming" hidden></span></p>
+  </header>
+
+  <p id="problem" class="notice bad" role="alert" hidden></p>
+
+  <section id="waiting" class="card attention" hidden>
+    <h2>Needs you</h2>
+    <ul id="waiting-list" class="rows"></ul>
+  </section>
+
+  <div class="grid">
+    <section class="card" id="deposit">
+      <h2>Add BSV</h2>
+      <div class="deposit">
+        <img id="qr" alt="Deposit address as a QR code" width="148" height="148" hidden>
+        <div>
+          <p class="label">Deposit address</p>
+          <p id="address" class="mono wrap"></p>
+          <p class="actions">
+            <button type="button" id="copy">Copy address</button>
+            <button type="button" class="quiet" id="refresh">Check for deposits</button>
+          </p>
+          <p class="hint">Send BSV only. A deposit shows up within seconds.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Spending limits</h2>
+      <form id="limits">
+        <label>Per payment, USD <input id="per-payment" inputmode="decimal" autocomplete="off" required></label>
+        <label>Per day, USD <input id="per-day" inputmode="decimal" autocomplete="off" required></label>
+        <p class="hint" id="today"></p>
+        <p class="actions"><button type="submit">Save limits</button></p>
+      </form>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Inference account</h2>
+    <dl class="facts">
+      <div><dt>Balance at Twetch</dt><dd id="gw-balance">–</dd></div>
+      <div><dt>Credit</dt><dd id="gw-credit">–</dd></div>
+      <div><dt>Used</dt><dd id="gw-spent">–</dd></div>
+      <div><dt>Waiting to be paid</dt><dd id="owed">–</dd></div>
+    </dl>
+    <p class="hint" id="gw-note"></p>
+  </section>
+
+  <section class="card">
+    <h2>Activity</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>When</th><th>What</th><th class="num">Cost</th><th>Status</th><th>Transaction</th></tr></thead>
+        <tbody id="activity"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="empty" hidden>Requests you make in TwetchCode show up here, one transaction each.</p>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Withdraw</h2>
+      <form id="withdraw">
+        <label>To BSV address <input id="to" class="mono" autocomplete="off" spellcheck="false" required></label>
+        <label>Amount, BSV <input id="amount" inputmode="decimal" autocomplete="off" placeholder="Everything"></label>
+        <p class="actions"><button type="submit">Withdraw</button></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Backup and keys</h2>
+      <p class="hint">Twelve words restore this wallet. Anyone who has them can spend it. They are kept in this computer's keychain.</p>
+      <div id="phrase-box" hidden>
+        <p id="phrase" class="phrase mono"></p>
+      </div>
+      <p class="actions">
+        <button type="button" id="reveal">Show recovery phrase</button>
+        <button type="button" class="quiet" id="rotate">Replace gateway key</button>
+      </p>
+      <form id="restore" hidden>
+        <label>Restore from twelve words <input id="restore-phrase" autocomplete="off" spellcheck="false"></label>
+        <p class="actions"><button type="submit" class="quiet">Restore</button></p>
+      </form>
+    </section>
+  </div>
+
+  <footer>
+    <p>TwetchCode is an unofficial fork based on the T3 Code source code, not affiliated with T3 Tools, Inc.</p>
+  </footer>
+</main>
+
+<dialog id="confirm">
+  <form method="dialog">
+    <h2 id="confirm-title"></h2>
+    <p id="confirm-text"></p>
+    <p class="actions"><button value="cancel" class="quiet" autofocus>Cancel</button><button value="ok" id="confirm-ok"></button></p>
+  </form>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/wallet/app.js" defer></script>
+</body>
+</html>

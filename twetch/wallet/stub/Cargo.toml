@@ -1,0 +1,17 @@
+[package]
+name = "twetch-stub"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Local stand-in for ai.twetch.com and WhatsOnChain. Test only: never shipped."
+
+[dependencies]
+twetch-crypto.workspace = true
+bitcoin.workspace = true
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+axum.workspace = true
+futures-util.workspace = true
+bytes.workspace = true

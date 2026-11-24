@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="864" viewBox="0 0 640 432">
+  <rect width="640" height="432" fill="#eef1ee"/>
+  <text x="320" y="104" fill="#17201b" font-family="Helvetica" font-size="23" font-weight="700" text-anchor="middle">Drag TwetchCode into Applications.</text>
+  <path d="M270 204Q320 179 370 204M358 190L370 204L351 209" stroke="#0b6b4f" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="320" y="367" fill="#5d6a63" font-family="Helvetica" font-size="12" text-anchor="middle">Once copied, open it from Applications.</text>
+</svg>

@@ -13,6 +13,21 @@ RELEASE_REPO=${TWETCH_RELEASE_REPO:-twetch-inc/twetch-code}
 [ $# -gt 0 ] || set -- --platform mac --target dmg --arch arm64
 
 (cd twetch/wallet && cargo build --release --locked)
+# Sign the Rust wallet sidecar with a stable identifier + Apple cert so macOS
+# Keychain remembers its ACL across restarts and auto-updates (ad-hoc binaries
+# get prompted on every single Keychain read).
+if [ "$(uname)" = Darwin ]; then
+  SIGN_ID="${TWETCH_SIGN_IDENTITY:-}"
+  if [ -z "$SIGN_ID" ]; then
+    SIGN_ID=$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1 || true)
+  fi
+  if [ -z "$SIGN_ID" ]; then
+    SIGN_ID=$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' | head -1 || true)
+  fi
+  if [ -n "$SIGN_ID" ]; then
+    codesign --force --sign "$SIGN_ID" --identifier "com.twetch.code.wallet" --options runtime twetch/wallet/target/release/twetch-wallet
+  fi
+fi
 node twetch/rebrand.mjs
 
 cd twetch/.stage

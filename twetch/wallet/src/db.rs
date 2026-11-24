@@ -205,6 +205,19 @@ impl Tx<'_> {
         Ok(())
     }
 
+    /// Remove an item that was never signed.
+    ///
+    /// # Errors
+    /// On a storage failure, or when it was signed after all.
+    pub fn forget(&self, item: &Item) -> Result<()> {
+        let stored = self.item(&item.id)?.context("no such payment")?;
+        anyhow::ensure!(stored.tx_hex.is_empty() && stored.old_txids.is_empty(), "{} was signed", item.id);
+        self.0.open_table(ITEMS)?.remove(item.id.as_str())?;
+        self.0.open_table(RECENT)?.remove(item.seq)?;
+        self.0.open_table(ACTIVE)?.remove(item.seq)?;
+        Ok(())
+    }
+
     /// A new item with the next sequence number.
     ///
     /// # Errors

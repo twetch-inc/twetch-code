@@ -461,7 +461,8 @@ async fn a_top_up_over_the_limit_or_the_balance_is_refused_in_words() {
     assert_eq!(body["error"]["code"], "insufficient_funds");
     assert!(body["error"]["message"].as_str().unwrap().contains(&rig.address()));
     assert!(rig.world.lock().unwrap().payments.is_empty());
-    // Neither try left anything owed or any coin taken.
+    // Neither try left a row, a debt or a taken coin.
+    assert!(rig.run().engine.db.recent(5).unwrap().is_empty());
     assert!(rig.run().engine.db.active().unwrap().is_empty());
     rig.books_balance();
 }

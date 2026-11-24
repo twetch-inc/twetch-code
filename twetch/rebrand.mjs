@@ -30,6 +30,8 @@ const CODE = /^(apps\/(desktop|server|web)|packages|scripts|native)\//;
 const EVERYWHERE = [
   [/T3 Code \((Beta|Alpha|Dev|Nightly)\)/g, "TwetchCode ($1)"],
   [/T3[ -]Code/g, "TwetchCode"],
+  [/\bT3 (threads?|home|server|Server|process|system|desktop|project file|tools?|environments?|could)\b/g, "TwetchCode $1", /^packages\/ssh\//],
+  [/\bt3 command\b/g, "twetchcode command", /^(?!apps\/web\/src\/(components|state)\/)/],
   [/com\.t3tools\.T3Code/g, "com.twetch.TwetchCode"],
   [/com\.t3tools\.t3code/g, "com.twetch.code"],
   // A T3 Code session on this machine exports these; none may reach us.
@@ -100,6 +102,7 @@ const ANCHORED = {
     ],
   ],
   "scripts/build-desktop-artifact.ts": [
+    ["scripts/prepare-server-compile-cache.cjs", "scripts/twetch-after-pack.cjs"],
     ['["t3code", "t3code-dev"]', '["twetchcode", "twetchcode-dev"]'],
     ['executableName: "t3code"', 'executableName: "twetchcode"'],
     ['homepage: "https://t3.codes"', 'homepage: "https://twetch.com"'],
@@ -110,6 +113,7 @@ const ANCHORED = {
   // Words and places that name the upstream product's own services.
   "apps/web/src/components/sidebar/SidebarChrome.tsx": [
     ['<T3Wordmark aria-label="T3"', '<T3Wordmark aria-label="Twetch"'],
+    ["      <SidebarUpdatePill />\n", ""],
     ["items-baseline gap-1 text-sm font-medium tracking-tight", "items-baseline text-sm font-medium tracking-tight"],
   ],
   "apps/web/src/components/ui/standalone-page.tsx": [['"flex items-baseline gap-1.5"', '"flex items-baseline"']],
@@ -118,7 +122,10 @@ const ANCHORED = {
     ["{showPhone ? <PhoneSection environmentId={environmentId} /> : null}", "{showPhone ? null : null}"],
   ],
   "apps/web/src/components/settings/SettingsPanels.tsx": [
-    ["including the anonymous usage data TwetchCode collects.", "TwetchCode sends no usage data."],
+    ["your data, including the anonymous usage data TwetchCode collects.", "your data. TwetchCode sends no usage data."],
+    ["See your agents, import projects, and set up your phone.", "See your agents and import projects."],
+    // Tracks belong to the upstream update feed.
+    ['{hasDesktopBridge ? (\n        <SettingsRow\n          {...setting("update-track")}', '{hasDesktopBridge && false ? (\n        <SettingsRow\n          {...setting("update-track")}'],
   ],
   "apps/web/src/components/InstallT3Commands.tsx": [
     ['<CommandBlock command="curl -fsSL https://t3.codes/install.sh | sh" />', '<CommandBlock command="npm install -g t3" />'],
@@ -228,11 +235,14 @@ for (const rel of files) {
   put(rel.replace("com.t3tools.t3code.metainfo.xml", "com.twetch.code.metainfo.xml"), bytes, stat.mode);
 }
 
+put("scripts/twetch-after-pack.cjs", fs.readFileSync(path.join(root, "twetch/after-pack.cjs")), 0o644);
+
 // The wallet binary, where the desktop build picks up its resources.
 const wallet = process.platform === "win32" ? "twetch-wallet.exe" : "twetch-wallet";
 const built = path.join(root, "twetch/wallet/target/release", wallet);
 if (fs.existsSync(built)) put(`apps/desktop/resources/twetch-wallet/${wallet}`, fs.readFileSync(built), 0o755);
 else problems.push("twetch-wallet is not built: cargo build --release in twetch/wallet");
+put("apps/desktop/resources/twetch-wallet/LICENSE.txt", fs.readFileSync(path.join(root, "LICENSE")), 0o644);
 
 // Files that upstream removed since the last copy.
 const manifest = path.join(stage, ".twetch-files.json");

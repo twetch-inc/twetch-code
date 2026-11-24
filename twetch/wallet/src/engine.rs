@@ -404,6 +404,10 @@ impl Engine {
             }
             match item.state {
                 State::Open => self.ask_cost(item).await?,
+                // A top-up is signed as it is made; one that was not is for a request that is gone.
+                State::Owed | State::Held if item.kind == Kind::Topup && item.old_txids.is_empty() => {
+                    self.db.write(|t| t.forget(&item))?;
+                }
                 State::Owed | State::Held => {
                     if let Some(signed) = self.sign(item).await? {
                         self.submit(signed).await?;
@@ -723,10 +727,8 @@ impl Engine {
                 Ok(signed) => self.submit(signed).await.map_err(internal)?,
                 Err(e) => {
                     // Not signed, so nothing is owed: the next request asks again.
-                    let mut gone = item;
-                    gone.state = State::Canceled;
-                    gone.note = format!("{e:#}");
-                    self.put(&gone).map_err(internal)?;
+                    self.db.write(|t| t.forget(&item)).map_err(internal)?;
+                    self.note_change();
                     return Err(self.short_of(sats, &e));
                 }
             }

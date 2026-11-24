@@ -47,6 +47,7 @@ th { text-align: left; font-weight: 400; padding: 0 12px 8px 0; }
 td { padding: 9px 12px 9px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 td:last-child, th:last-child { padding-right: 0; }
 .num { text-align: right; }
+td.num, th.num { padding-right: 28px; }
 a { color: var(--accent); text-underline-offset: 2px; }
 .state-paid, .state-free { color: var(--muted); }
 .state-held, .state-owed, .state-pending, .state-signed { color: var(--warn); }

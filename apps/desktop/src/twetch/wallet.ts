@@ -37,7 +37,19 @@ let child: NodeChildProcess.ChildProcess | undefined;
 let ready: Ready | undefined;
 let quitting = false;
 let restarts = 0;
-let walletWindow: Electron.BrowserWindow | undefined;
+
+const WALLET_API_GET = new Set(["state", "qr"]);
+const WALLET_API_POST = new Set([
+  "refresh",
+  "limits",
+  "approve",
+  "retry",
+  "cancel",
+  "withdraw",
+  "reveal",
+  "restore",
+  "rotate",
+]);
 
 function binaryPath(): string | undefined {
   const name = process.platform === "win32" ? "twetch-wallet.exe" : "twetch-wallet";
@@ -164,6 +176,7 @@ function ensureOpenCodeConfig(): void {
   const model = (name: string) => ({ name, limit: { context: 1_048_576, output: 65_536 } });
   const config = {
     model: `twetch/${DEFAULT_MODEL}`,
+    enabled_providers: ["twetch"],
     share: "disabled",
     autoupdate: false,
     provider: {
@@ -186,13 +199,30 @@ function ensureOpenCodeConfig(): void {
   writeAtomic(openCodePath("twetch.json"), `${JSON.stringify(config, null, 2)}\n`);
 }
 
-/** First run only: turn OpenCode on and choose the model. Later the settings are the user's. */
+const OTHER_PROVIDERS = [
+  "codex",
+  "claudeAgent",
+  "cursor",
+  "grok",
+  "fx",
+  "antigravity",
+  "kiro",
+  "pi",
+  "muse",
+  "acpRegistry",
+] as const;
+
+/** First run only: turn only OpenCode (Twetch) on; other providers stay off until enabled. */
 function seedSettings(stateDir: string, openCodeBinary: string): void {
   const path = NodePath.join(stateDir, "settings.json");
   if (NodeFS.existsSync(path)) return;
   const selection = { instanceId: "opencode", model: `twetch/${DEFAULT_MODEL}` };
+  const disabledProviders = Object.fromEntries(
+    OTHER_PROVIDERS.map((driver) => [driver, { driver, enabled: false, config: { enabled: false } }]),
+  );
   const settings = {
     providerInstances: {
+      ...disabledProviders,
       opencode: {
         driver: "opencode",
         enabled: true,
@@ -205,42 +235,30 @@ function seedSettings(stateDir: string, openCodeBinary: string): void {
   writeAtomic(path, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
-async function openWallet(): Promise<void> {
-  const { path } = (await local("/local/wallet-link", "POST")) as { path: string };
-  const origin = `http://127.0.0.1:${ready?.port}`;
-  if (walletWindow === undefined || walletWindow.isDestroyed()) {
-    walletWindow = new Electron.BrowserWindow({
-      width: 980,
-      height: 860,
-      minWidth: 400,
-      minHeight: 480,
-      title: "TwetchCode Wallet",
-      backgroundColor: Electron.nativeTheme.shouldUseDarkColors ? "#111513" : "#f6f7f5",
-      webPreferences: {
-        // Not persisted: the session ends with the app.
-        partition: "twetch-wallet",
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
-      },
-    });
-    const contents = walletWindow.webContents;
-    contents.session.setPermissionRequestHandler((_contents, permission, done) =>
-      done(permission === "clipboard-sanitized-write"),
-    );
-    contents.on("will-navigate", (event, url) => {
-      if (new URL(url).origin !== origin) event.preventDefault();
-    });
-    contents.setWindowOpenHandler(({ url }) => {
-      if (url.startsWith("https://whatsonchain.com/tx/")) void Electron.shell.openExternal(url);
-      return { action: "deny" };
-    });
-    walletWindow.on("closed", () => {
-      walletWindow = undefined;
-    });
+async function callWalletApi(endpoint: string, body?: unknown): Promise<unknown> {
+  if (ready === undefined) throw new Error("TwetchCode's wallet is not running.");
+  const isGet = WALLET_API_GET.has(endpoint);
+  const isPost = WALLET_API_POST.has(endpoint);
+  if (!isGet && !isPost) throw new Error("Unknown wallet endpoint.");
+  const method = isGet ? "GET" : "POST";
+  const response = await fetch(`http://127.0.0.1:${ready.port}/wallet/api/${endpoint}`, {
+    method,
+    headers: {
+      authorization: `Bearer ${ready.admin_token}`,
+      ...(isPost ? { "content-type": "application/json" } : {}),
+    },
+    ...(isPost ? { body: JSON.stringify(body ?? {}) } : {}),
+    signal: AbortSignal.timeout(65_000),
+  });
+  if (endpoint === "qr") {
+    if (!response.ok) throw new Error(`The wallet answered ${response.status}.`);
+    return response.text();
   }
-  await walletWindow.loadURL(`${origin}${path}`);
-  walletWindow.show();
+  const data = (await response.json()) as { error?: { message?: string } };
+  if (!response.ok) {
+    throw new Error(data.error?.message ?? `The wallet answered ${response.status}.`);
+  }
+  return data;
 }
 
 /** Only the app's own window may ask: never a page in the preview browser. */
@@ -253,12 +271,14 @@ function fromApp(event: Electron.IpcMainInvokeEvent): boolean {
 }
 
 function registerIpc(): void {
-  Electron.ipcMain.handle("twetch:wallet-open", async (event) => {
-    if (fromApp(event)) await openWallet();
-  });
   Electron.ipcMain.handle("twetch:wallet-status", async (event) =>
     fromApp(event) && ready !== undefined ? local("/local/status") : null,
   );
+  Electron.ipcMain.handle("twetch:wallet-api", async (event, endpoint: unknown, body?: unknown) => {
+    if (!fromApp(event)) throw new Error("Not allowed.");
+    if (typeof endpoint !== "string") throw new Error("Invalid endpoint.");
+    return callWalletApi(endpoint, body);
+  });
 }
 
 /**

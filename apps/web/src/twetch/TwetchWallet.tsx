@@ -1,9 +1,10 @@
+import { useNavigate } from "@tanstack/react-router";
 import { WalletIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../components/ui/sidebar";
 
-interface WalletStatus {
+export interface WalletStatus {
   readonly ready: boolean;
   readonly balance_sats: number;
   readonly balance_usd: number | null;
@@ -12,8 +13,8 @@ interface WalletStatus {
 declare global {
   interface Window {
     readonly twetchWallet?: {
-      readonly open: () => Promise<void>;
       readonly status: () => Promise<WalletStatus | null>;
+      readonly api: <T = unknown>(endpoint: string, body?: unknown) => Promise<T>;
     };
   }
 }
@@ -30,6 +31,7 @@ function chip(status: WalletStatus | null): string {
 /** The wallet belongs to the desktop app; a browser client has none. */
 export function TwetchWalletItem() {
   const wallet = window.twetchWallet;
+  const navigate = useNavigate();
   const [status, setStatus] = useState<WalletStatus | null>(null);
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- polls the wallet process
   useEffect(() => {
@@ -50,7 +52,7 @@ export function TwetchWalletItem() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton onClick={() => void wallet.open()}>
+        <SidebarMenuButton onClick={() => void navigate({ to: "/settings/wallet" })}>
           <WalletIcon />
           <span className="flex-1">Wallet</span>
           <span className="text-muted-foreground tabular-nums">{chip(status)}</span>

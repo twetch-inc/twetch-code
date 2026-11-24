@@ -226,6 +226,7 @@ fn opencode(list: &[Model], base: &str) -> serde_json::Value {
     serde_json::json!({
         "model": default,
         "small_model": small,
+        "enabled_providers": ["twetch"],
         "share": "disabled",
         "autoupdate": false,
         "provider": {

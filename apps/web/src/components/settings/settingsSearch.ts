@@ -20,6 +20,7 @@ import type { ResolvedSettingsScope } from "./settingsScope";
 export type SettingsPath =
   | "/settings/projects"
   | "/settings/general"
+  | "/settings/wallet"
   | "/settings/diagnostics"
   | "/settings/voice"
   | "/settings/appearance"
@@ -97,6 +98,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/diagnostics": msg("Diagnostics"),
   "/settings/projects": msg("Projects"),
   "/settings/general": msg("General"),
+  "/settings/wallet": msg("Wallet"),
   "/settings/appearance": msg("Appearance"),
   "/settings/chat": msg("Chat"),
   "/settings/diffs": msg("Diffs & pull requests"),
@@ -139,6 +141,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
     headingHidden: true,
     paths: [
       "/settings/general",
+      "/settings/wallet",
       "/settings/appearance",
       "/settings/chat",
       "/settings/diffs",
@@ -1473,6 +1476,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/diagnostics": "environment",
   "/settings/projects": "project",
   "/settings/general": null,
+  "/settings/wallet": null,
   "/settings/voice": null,
   "/settings/appearance": null,
   "/settings/chat": null,

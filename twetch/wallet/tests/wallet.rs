@@ -568,7 +568,9 @@ async fn nobody_else_gets_in() {
             h.post(rig.url(&format!("/wallet/api/{path}"))).bearer_auth(&r.proxy_token).header("origin", rig.url("")).json(&json!({})).send().await.unwrap();
         assert_eq!(res.status(), 401, "{path}");
     }
-    assert_eq!(h.get(rig.url("/wallet/api/state")).bearer_auth(&r.admin_token).send().await.unwrap().status(), 401);
+    assert_eq!(h.get(rig.url("/wallet/api/state")).bearer_auth(&r.proxy_token).send().await.unwrap().status(), 401);
+    assert_eq!(h.get(rig.url("/wallet/api/state")).bearer_auth(&r.admin_token).header("origin", "https://evil.example").send().await.unwrap().status(), 403);
+    assert_eq!(h.get(rig.url("/wallet/api/state")).bearer_auth(&r.admin_token).send().await.unwrap().status(), 200);
     let shell = h.get(rig.url("/wallet")).send().await.unwrap();
     assert_eq!(shell.status(), 401);
     assert!(shell.headers()["content-security-policy"].to_str().unwrap().contains("frame-ancestors 'none'"));

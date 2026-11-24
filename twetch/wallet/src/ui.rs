@@ -100,10 +100,12 @@ fn reply<T: Serialize>(out: anyhow::Result<T>) -> Response {
 
 macro_rules! guard {
     ($app:expr, $h:expr, $writes:expr) => {
-        if let Err(r) = $app.auth.page(&$h, $writes) {
-            return refused(&r);
+        if !matches!($app.auth.bearer(&$h), Ok(crate::auth::Who::Admin)) {
+            if let Err(r) = $app.auth.page(&$h, $writes) {
+                return refused(&r);
+            }
+            debug_assert!($h.contains_key(SESSION_HEADER));
         }
-        debug_assert!($h.contains_key(SESSION_HEADER));
     };
 }
 

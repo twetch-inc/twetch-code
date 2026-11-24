@@ -1,7 +1,7 @@
 //! Where the recovery phrase and the gateway key live: the OS keychain.
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use zeroize::Zeroizing;
 
@@ -66,6 +66,72 @@ impl SecretStore for Keychain {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(e) => Err(e.into()),
         }
+    }
+}
+
+/// Private `0600` JSON file inside the app's `0700` wallet directory.
+/// Avoids macOS legacy Keychain password prompts across app launches and auto-updates.
+pub struct FileSecrets {
+    path: PathBuf,
+    lock: Mutex<()>,
+}
+
+impl FileSecrets {
+    #[must_use]
+    pub fn new(path: PathBuf) -> Self {
+        Self { path, lock: Mutex::new(()) }
+    }
+
+    fn read_map(&self) -> anyhow::Result<HashMap<String, String>> {
+        match std::fs::read_to_string(&self.path) {
+            Ok(raw) if raw.trim().is_empty() => Ok(HashMap::new()),
+            Ok(raw) => Ok(serde_json::from_str(&raw)?),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(HashMap::new()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn write_map(&self, map: &HashMap<String, String>) -> anyhow::Result<()> {
+        if let Some(parent) = self.path.parent() {
+            crate::auth::private_dir(parent)?;
+        }
+        let body = serde_json::to_vec(map)?;
+        let tmp = self.path.with_extension("json.tmp");
+        #[cfg(unix)]
+        {
+            use std::io::Write;
+            use std::os::unix::fs::OpenOptionsExt;
+            let mut f = std::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(&tmp)?;
+            f.write_all(&body)?;
+            f.sync_all()?;
+        }
+        #[cfg(not(unix))]
+        std::fs::write(&tmp, &body)?;
+        std::fs::rename(&tmp, &self.path)?;
+        Ok(())
+    }
+}
+
+impl SecretStore for FileSecrets {
+    fn get(&self, name: &str) -> anyhow::Result<Option<Zeroizing<String>>> {
+        let _guard = self.lock.lock().expect("file secrets lock");
+        Ok(self.read_map()?.remove(name).map(Zeroizing::new))
+    }
+
+    fn set(&self, name: &str, value: &str) -> anyhow::Result<()> {
+        let _guard = self.lock.lock().expect("file secrets lock");
+        let mut map = self.read_map()?;
+        map.insert(name.to_string(), value.to_string());
+        self.write_map(&map)
+    }
+
+    fn delete(&self, name: &str) -> anyhow::Result<()> {
+        let _guard = self.lock.lock().expect("file secrets lock");
+        let mut map = self.read_map()?;
+        if map.remove(name).is_some() {
+            self.write_map(&map)?;
+        }
+        Ok(())
     }
 }
 

@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
-use twetch_wallet::{secrets::Keychain, Config, DEFAULT_GATEWAY, DEFAULT_PORT, DEFAULT_WOC};
+use twetch_wallet::{secrets::FileSecrets, Config, DEFAULT_GATEWAY, DEFAULT_PORT, DEFAULT_WOC};
 
 #[derive(Serialize)]
 struct Ready<'a> {
@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
     let default_home = user_home.map(|h| h.join(".twetch-code"));
     let home = env("TWETCHCODE_HOME").map(PathBuf::from).or_else(|| default_home.clone());
     let home = home.ok_or_else(|| anyhow::anyhow!("no home directory"))?;
-    let keychain = Keychain::for_home(&home, &default_home.unwrap_or_default());
+    let secrets = FileSecrets::new(home.join("wallet").join("secrets.json"));
     // The same port every start: OpenCode's config names it.
     let saved = home.join("wallet").join("port");
     let port = match env("TWETCH_WALLET_PORT") {
@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         gateway: env("TWETCH_AI_URL").unwrap_or_else(|| DEFAULT_GATEWAY.into()),
         woc: env("TWETCH_WALLET_WOC_URL").unwrap_or_else(|| DEFAULT_WOC.into()),
     };
-    let running = twetch_wallet::start(cfg, Arc::new(keychain)).await?;
+    let running = twetch_wallet::start(cfg, Arc::new(secrets)).await?;
     std::fs::write(&saved, running.addr.port().to_string())?;
     let line = Ready { ready: true, port: running.addr.port(), admin_token: &running.admin_token, proxy_token: &running.proxy_token };
     println!("{}", serde_json::to_string(&line)?);
